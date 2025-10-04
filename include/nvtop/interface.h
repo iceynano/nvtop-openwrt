@@ -22,9 +22,9 @@
 #ifndef INTERFACE_H_
 #define INTERFACE_H_
 
+#include "nvtop/extract_gpuinfo.h"
+#include "nvtop/interface_common.h"
 #include "nvtop/interface_options.h"
-
-#include <stdbool.h>
 
 struct nvtop_interface;
 
@@ -54,7 +54,5 @@ bool interface_freeze_processes(struct nvtop_interface *interface);
 int interface_update_interval(const struct nvtop_interface *interface);
 
 bool show_information_messages(unsigned num_messages, const char **messages);
-
-void print_snapshot(struct list_head *devices, bool use_fahrenheit_option);
 
 #endif // INTERFACE_H_

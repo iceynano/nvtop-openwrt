@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.18)
 #                              PROJECT                              #
 #///////////////////////////////////////////////////////////////////#
 
-project(nvtop VERSION 3.2.0
+project(nvtop VERSION 3.1.0
   LANGUAGES C CXX)
 
 set(default_build_type "Release")
@@ -39,7 +39,6 @@ set_property(TARGET ncurses PROPERTY
   INTERFACE_INCLUDE_DIRECTORIES ${CURSES_INCLUDE_DIRS})
 set_property(TARGET ncurses PROPERTY
   INTERFACE_LINK_LIBRARIES ${CURSES_LIBRARIES})
-add_compile_definitions(NCURSES_ENABLE_STDBOOL_H=1)
 
 #///////////////////////////////////////////////////////////////////#
 #                        COMPILATION OPTIONS                        #
@@ -91,32 +90,6 @@ else()
   set(ASCEND_SUPPORT_DEFAULT OFF)
 endif()
 
-# TPU support is only available on Linux
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  # Check for libtpuinfo.so to set the default for TPU support
-  find_library(LIBTPUINFO
-    NAMES libtpuinfo.so
-    PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64
-    HINTS ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib64 lib lib64
-  )
-  if (NOT LIBTPUINFO)
-    set(TPU_SUPPORT_DEFAULT OFF)
-  else()
-    set(TPU_SUPPORT_DEFAULT ON)
-  endif()
-else()
-  set(TPU_SUPPORT_DEFAULT OFF)
-endif()
-
-# Rockchip support is only available on Linux on arm
-# Enable Rockchip support only on ARM Linux
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
-    (CMAKE_SYSTEM_PROCESSOR MATCHES "armv7" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64"))
-  set(ROCKCHIP_SUPPORT_DEFAULT ON)
-else()
-  set(ROCKCHIP_SUPPORT_DEFAULT OFF)
-endif()
-
 option(NVIDIA_SUPPORT "Build support for NVIDIA GPUs through libnvml" ${NVIDIA_SUPPORT_DEFAULT})
 option(AMDGPU_SUPPORT "Build support for AMD GPUs through amdgpu driver" ${AMDGPU_SUPPORT_DEFAULT})
 option(INTEL_SUPPORT "Build support for Intel GPUs through i915 or xe driver" ${INTEL_SUPPORT_DEFAULT})
@@ -126,8 +99,6 @@ option(PANFROST_SUPPORT "Build support for Mali GPUs through panfrost driver" ${
 option(PANTHOR_SUPPORT "Build support for Mali GPUs through panthor driver" ${PANTHOR_SUPPORT_DEFAULT})
 option(ASCEND_SUPPORT "Build support for Ascend NPUs through Ascend DCMI" ${ASCEND_SUPPORT_DEFAULT})
 option(V3D_SUPPORT "Build support for Raspberrypi through v3d" ${V3D_SUPPORT_DEFAULT})
-option(TPU_SUPPORT "Build support for Google TPUs through GRPC" ${TPU_SUPPORT_DEFAULT})
-option(ROCKCHIP_SUPPORT "Enable support for Rockchip NPU" ${ROCKCHIP_SUPPORT_DEFAULT})
 
 add_subdirectory(src)
 
@@ -143,7 +114,7 @@ configure_file(
   IMMEDIATE @ONLY)
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/desktop/nvtop.metainfo.xml.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/desktop/io.github.syllo.nvtop.metainfo.xml"
+  "${CMAKE_CURRENT_BINARY_DIR}/desktop/nvtop.metainfo.xml"
   IMMEDIATE @ONLY)
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/manpage/nvtop"
@@ -152,14 +123,14 @@ install(FILES
   RENAME nvtop.1)
 install(FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/desktop/nvtop.svg"
-  DESTINATION share/icons/hicolor/scalable/apps
+  DESTINATION share/icons
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 install(FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/desktop/nvtop.desktop"
   DESTINATION share/applications
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/desktop/io.github.syllo.nvtop.metainfo.xml"
+  "${CMAKE_CURRENT_BINARY_DIR}/desktop/nvtop.metainfo.xml"
   DESTINATION share/metainfo
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 

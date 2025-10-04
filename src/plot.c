@@ -24,7 +24,6 @@
 
 #include <assert.h>
 #include <ncurses.h>
-#include <stdbool.h>
 #include <string.h>
 #include <tgmath.h>
 

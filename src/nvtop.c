@@ -19,6 +19,16 @@
  *
  */
 
+#include <getopt.h>
+#include <ncurses.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <locale.h>
+
 #include "nvtop/extract_gpuinfo.h"
 #include "nvtop/info_messages.h"
 #include "nvtop/interface.h"
@@ -26,17 +36,6 @@
 #include "nvtop/interface_options.h"
 #include "nvtop/time.h"
 #include "nvtop/version.h"
-
-#include <getopt.h>
-#include <ncurses.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <locale.h>
 
 static volatile sig_atomic_t signal_exit = 0;
 static volatile sig_atomic_t signal_resize_win = 0;
@@ -66,9 +65,7 @@ static const char helpstring[] = "Available options:\n"
                                  "  -i --gpu-info     : Show bar with additional GPU parametres\n"
                                  "  -E --encode-hide  : Set encode/decode auto hide time in seconds "
                                  "(default 30s, negative = always on screen)\n"
-                                 "  -h --help         : Print help and exit\n"
-                                 "  -s --snapshot     : Output the current gpu stats without ncurses"
-                                 "(useful for scripting)\n";
+                                 "  -h --help         : Print help and exit\n";
 
 static const char versionString[] = "nvtop version " NVTOP_VERSION_STRING;
 
@@ -85,11 +82,10 @@ static const struct option long_opts[] = {
     {.name = "no-plot", .has_arg = no_argument, .flag = NULL, .val = 'p'},
     {.name = "no-processes", .has_arg = no_argument, .flag = NULL, .val = 'P'},
     {.name = "reverse-abs", .has_arg = no_argument, .flag = NULL, .val = 'r'},
-    {.name = "snapshot", .has_arg = no_argument, .flag = NULL, .val = 's'},
     {0, 0, 0, 0},
 };
 
-static const char opts[] = "hvd:c:CfE:pPris";
+static const char opts[] = "hvd:c:CfE:pPri";
 
 int main(int argc, char **argv) {
   (void)setlocale(LC_CTYPE, "");
@@ -104,7 +100,6 @@ int main(int argc, char **argv) {
   bool reverse_plot_direction_option = false;
   bool encode_decode_timer_option_set = false;
   bool show_gpu_info_bar = false;
-  bool show_snapshot = false;
   double encode_decode_hide_time = -1.;
   char *custom_config_file_path = NULL;
   while (true) {
@@ -165,9 +160,6 @@ int main(int argc, char **argv) {
     case 'r':
       reverse_plot_direction_option = true;
       break;
-    case 's':
-      show_snapshot = true;
-      break;
     case ':':
     case '?':
       switch (optopt) {
@@ -212,12 +204,6 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   if (allDevCount == 0) {
     fprintf(stdout, "No GPU to monitor.\n");
-    return EXIT_SUCCESS;
-  }
-
-  if (show_snapshot) {
-    print_snapshot(&monitoredGpus, use_fahrenheit_option);
-    gpuinfo_shutdown_info_extraction(&monitoredGpus);
     return EXIT_SUCCESS;
   }
 

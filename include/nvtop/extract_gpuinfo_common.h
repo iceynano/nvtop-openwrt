@@ -25,6 +25,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/types.h>
 
 #include "list.h"
@@ -60,7 +61,6 @@ enum gpuinfo_static_info_valid {
   gpuinfo_n_shared_cores_valid,
   gpuinfo_l2cache_size_valid,
   gpuinfo_n_exec_engines_valid,
-  gpuinfo_engine_count_valid,
   gpuinfo_static_info_count,
 };
 
@@ -75,7 +75,6 @@ struct gpuinfo_static_info {
   unsigned n_shared_cores;
   unsigned l2cache_size;
   unsigned n_exec_engines;
-  unsigned engine_count;
   bool integrated_graphics;
   bool encode_decode_shared;
   unsigned char valid[(gpuinfo_static_info_count + CHAR_BIT - 1) / CHAR_BIT];
@@ -101,7 +100,6 @@ enum gpuinfo_dynamic_info_valid {
   gpuinfo_pcie_rx_valid,
   gpuinfo_pcie_tx_valid,
   gpuinfo_fan_speed_valid,
-  gpuinfo_fan_rpm_valid,
   gpuinfo_gpu_temp_valid,
   gpuinfo_power_draw_valid,
   gpuinfo_power_draw_max_valid,
@@ -126,7 +124,6 @@ struct gpuinfo_dynamic_info {
   unsigned int pcie_rx;             // PCIe throughput in KB/s
   unsigned int pcie_tx;             // PCIe throughput in KB/s
   unsigned int fan_speed;           // Fan speed percentage
-  unsigned int fan_rpm;             // Fan speed RPM
   unsigned int gpu_temp;            // GPU temperature °celsius
   unsigned int power_draw;          // Power usage in milliwatts
   unsigned int power_draw_max;      // Max power usage in milliwatts

@@ -38,7 +38,6 @@ Table of Contents
   - [Fedora / Red Hat / CentOS](#fedora--red-hat--centos)
   - [OpenSUSE](#opensuse)
   - [Arch Linux](#arch-linux)
-  - [Gentoo](#gentoo)
   - [AppImage](#appimage)
   - [Snap](#snap)
   - [Conda-forge](#conda-forge)
@@ -98,8 +97,12 @@ source](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/dr
 Hence, you will need a kernel with a version greater or equal to 5.19 to see the
 processes using Intel GPUs.
 
-Intel requires CAP_PERFMON or CAP_SYS_ADMIN capabilities to access the total memory usage,
-you can run `sudo setcap cap_perfmon=ep nvtop` to grant the necessary permissions or run nvtop as root.
+**INTEL SUPPORT STATUS**
+- Intel is working on exposing more hardware information through an `HWMON`
+interface. The patches are still a work in progress: [see patch
+series](https://patchwork.freedesktop.org/series/104278/).
+- The fdinfo interface does not expose the memory allocated by the process. The
+field in the process list is therefore empty.
 
 ### NVIDIA
 
@@ -136,13 +139,7 @@ NVTOP supports VideoCore (testing on raspberrypi 4B).
 
 Supports GPU frequency, temperature, utilization, per-process utilization, GPU memory usage, and H264 decoding utilization.
 
-On non-raspberry pi os, you need to use the `linux-rpi 6.12.y` kernel and above, and ensure the presence of the `/dev/vcio` device.
-
-### Rockchip
-
-NVTOP supports Rockchip (testing on orangepi 5 plus).
-
-Supports NPU frequency, temperature, utilization.
+On non-raspberry pi os, you need to use the `linux-rpi` kernel, ensure the presence of the `/dev/vcio` device, and have access permissions to the `/sys/kernel/debug` directory.
 
 Build
 -----
@@ -163,19 +160,20 @@ If your distribution provides the snap utility, follow the [snap installation pr
 
 A standalone application is available as [AppImage](#appimage).
 
-#### Ubuntu Focal (20.04), Debian buster (stable) and more recent
+#### Ubuntu Impish (21.10), Debian buster (stable) and more recent
 
-```bash
-sudo apt install nvtop
-```
+- ```bash
+  sudo apt install nvtop
+  ```
 
 #### Ubuntu PPA
 
-A [PPA supporting Ubuntu 20.04 and newer](https://launchpad.net/~quentiumyt/+archive/ubuntu/nvtop) is provided by
-[Quentin Lienhardt](https://github.com/QuentiumYT) that offers an up-to-date version of `nvtop`, enabled for NVIDIA, AMD and Intel.
+A [PPA supporting Ubuntu 20.04, 22.04 and newer](https://launchpad.net/~flexiondotorg/+archive/ubuntu/nvtop) is provided by
+[Martin Wimpress](https://github.com/flexiondotorg) that offers an up-to-date
+version of `nvtop`, enabled for NVIDIA, AMD and Intel.
 
 ```bash
-sudo add-apt-repository ppa:quentiumyt/nvtop
+sudo add-apt-repository ppa:flexiondotorg/nvtop
 sudo apt install nvtop
 ```
 
@@ -276,7 +274,7 @@ Build process for OpenSUSE:
 ### Gentoo
 
 - ```bash
-  sudo emerge -av nvtop
+  sudo layman -a guru && sudo emerge -av nvtop
   ```
 
 ### AppImage
@@ -352,9 +350,7 @@ make
 sudo make install
 
 # Alternatively, install without privileges at a location of your choosing
-# cmake .. -DNVIDIA_SUPPORT=ON -DAMDGPU_SUPPORT=ON -DINTEL_SUPPORT=ON -DCMAKE_INSTALL_PREFIX=/path/to/your/dir
-# make
-# make install
+# make DESTDIR="/your/install/path" install
 ```
 
 If you use **conda** as environment manager and encounter an error while building NVTOP, try `conda deactivate` before invoking `cmake`.

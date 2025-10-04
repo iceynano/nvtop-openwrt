@@ -19,6 +19,7 @@
  *
  */
 
+#include <assert.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -215,10 +216,10 @@ static void gpuinfo_populate_process_info(struct gpu_info *device) {
     // Process memory usage percent of total device memory
     if (GPUINFO_DYNAMIC_FIELD_VALID(&device->dynamic_info, total_memory) &&
         GPUINFO_PROCESS_FIELD_VALID(&device->processes[j], gpu_memory_usage)) {
-      double percentage = fmin(
-          round(100. * ((double)device->processes[j].gpu_memory_usage / (double)device->dynamic_info.total_memory)),
-          100.);
+      float percentage =
+          roundf(100.f * (float)device->processes[j].gpu_memory_usage / (float)device->dynamic_info.total_memory);
       SET_GPUINFO_PROCESS(&device->processes[j], gpu_memory_percentage, (unsigned)percentage);
+      assert(device->processes[j].gpu_memory_percentage <= 100);
     }
   }
 }
@@ -340,7 +341,6 @@ void gpuinfo_refresh_utilisation_rate(struct gpu_info *gpu_info) {
   unsigned int utilisation_rate;
   uint64_t max_freq_hz;
   double avg_delta_secs;
-  unsigned int ec;
 
   for (unsigned processIdx = 0; processIdx < gpu_info->processes_count; ++processIdx) {
     struct gpu_process *process_info = &gpu_info->processes[processIdx];
@@ -352,14 +352,9 @@ void gpuinfo_refresh_utilisation_rate(struct gpu_info *gpu_info) {
   if (!gfx_total_process_cycles)
     return;
 
-  if (IS_VALID(gpuinfo_engine_count_valid, gpu_info->static_info.valid))
-          ec = gpu_info->static_info.engine_count;
-  else
-          ec = 1;
-
   avg_delta_secs = ((double)total_delta / gpu_info->processes_count) / 1000000000.0;
   max_freq_hz = gpu_info->dynamic_info.gpu_clock_speed_max * 1000000;
-  utilisation_rate = (unsigned int)((((double)gfx_total_process_cycles) / (((double)max_freq_hz) * avg_delta_secs * ec)) * 100);
+  utilisation_rate = (unsigned int)((((double)gfx_total_process_cycles) / (((double)max_freq_hz) * avg_delta_secs * 2)) * 100);
   utilisation_rate = utilisation_rate > 100 ? 100 : utilisation_rate;
 
   SET_GPUINFO_DYNAMIC(&gpu_info->dynamic_info, gpu_util_rate, utilisation_rate);

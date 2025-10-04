@@ -21,7 +21,7 @@ extern "C" {
 #endif
 #endif /* __cplusplus */
 
-#ifdef __linux__
+#ifdef __linux
 #define DCMIDLLEXPORT
 #else
 #define DCMIDLLEXPORT _declspec(dllexport)

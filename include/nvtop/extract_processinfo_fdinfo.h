@@ -22,6 +22,7 @@
 #ifndef NVTOP_EXTRACT_PROCESSINFO_FDINFO__
 #define NVTOP_EXTRACT_PROCESSINFO_FDINFO__
 
+#include "nvtop/common.h"
 #include "nvtop/extract_gpuinfo_common.h"
 
 #include <stdio.h>

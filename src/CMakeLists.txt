@@ -60,7 +60,7 @@ if(ASCEND_SUPPORT)
   target_link_libraries(nvtop PRIVATE "${DCMI_LIBRARY_PATH}/libdcmi.so")
 endif()
 
-if(AMDGPU_SUPPORT OR INTEL_SUPPORT OR V3D_SUPPORT)
+if(AMDGPU_SUPPORT OR INTEL_SUPPORT)
   if((SYSTEMD_FOUND AND UDEV_FOUND AND USE_LIBUDEV_OVER_LIBSYSTEMD) OR(NOT SYSTEMD_FOUND AND UDEV_FOUND))
     target_compile_definitions(nvtop PRIVATE USING_LIBUDEV)
     target_link_libraries(nvtop PRIVATE udev)
@@ -68,39 +68,36 @@ if(AMDGPU_SUPPORT OR INTEL_SUPPORT OR V3D_SUPPORT)
     target_compile_definitions(nvtop PRIVATE USING_LIBSYSTEMD)
     target_link_libraries(nvtop PRIVATE systemd)
   else()
-    message(FATAL_ERROR "Neither libsystemd nor libudev were found; These are required for AMDGPU, INTEL and V3D support")
+    message(FATAL_ERROR "Neither libsystemd nor libudev were found; These are required for AMDGPU and INTEL support")
   endif()
 
   target_sources(nvtop PRIVATE device_discovery_linux.c)
 endif()
 
-if(AMDGPU_SUPPORT OR INTEL_SUPPORT OR MSM_SUPPORT OR PANFROST_SUPPORT OR PANTHOR_SUPPORT)
+if(AMDGPU_SUPPORT OR MSM_SUPPORT)
   # Search for libdrm for AMDGPU support
   find_package(Libdrm)
 
   if(Libdrm_FOUND)
     message(STATUS "Found libdrm; Enabling support")
     target_include_directories(nvtop PRIVATE ${Libdrm_INCLUDE_DIRS})
+    if (AMDGPU_SUPPORT)
+      target_sources(nvtop PRIVATE extract_gpuinfo_amdgpu.c)
+      target_sources(nvtop PRIVATE extract_gpuinfo_amdgpu_utils.c)
+    endif()
+
+    if (MSM_SUPPORT)
+      target_sources(nvtop PRIVATE extract_gpuinfo_msm.c)
+      target_sources(nvtop PRIVATE extract_gpuinfo_msm_utils.c)
+    endif()
+
   else()
-    message(FATAL_ERROR "libdrm not found; This library is required for AMDGPU, INTEL, MSM, PANFROST and PANTHOR support")
-    # CMake will exit if libdrm is not found
+    message(FATAL_ERROR "libdrm not found; This library is required for AMDGPU and MSM support")
   endif()
-endif()
-
-if (AMDGPU_SUPPORT)
-  target_sources(nvtop PRIVATE extract_gpuinfo_amdgpu.c)
-  target_sources(nvtop PRIVATE extract_gpuinfo_amdgpu_utils.c)
-endif()
-
-if (MSM_SUPPORT)
-  target_sources(nvtop PRIVATE extract_gpuinfo_msm.c)
-  target_sources(nvtop PRIVATE extract_gpuinfo_msm_utils.c)
 endif()
 
 if(INTEL_SUPPORT)
   target_sources(nvtop PRIVATE extract_gpuinfo_intel.c)
-  target_sources(nvtop PRIVATE extract_gpuinfo_intel_i915.c)
-  target_sources(nvtop PRIVATE extract_gpuinfo_intel_xe.c)
 endif()
 
 if(V3D_SUPPORT)
@@ -130,25 +127,6 @@ endif()
 
 if ((PANFROST_SUPPORT) OR (PANTHOR_SUPPORT))
   target_sources(nvtop PRIVATE extract_gpuinfo_mali_common.c)
-endif()
-
-if(TPU_SUPPORT)
-  find_library(LIBTPUINFO
-    NAMES libtpuinfo.so
-    PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64
-    HINTS ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib64 lib lib64
-  )
-  if (NOT LIBTPUINFO)
-    message(WARNING "TPU Support enabled, but libtpuinfo.so not found in ldconfig path, we will not be able to read TPU usage")
-    set(TPU_SUPPORT_DEFAULT OFF)
-  endif()
-  target_sources(nvtop PRIVATE extract_gpuinfo_tpu.c)
-endif()
-
-if(ROCKCHIP_SUPPORT)
-  message(STATUS "Building with Rockchip NPU support")
-
-  target_sources(nvtop PRIVATE extract_npuinfo_rockchip.c)
 endif()
 
 target_include_directories(nvtop PRIVATE
