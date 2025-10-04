@@ -1,0 +1,143 @@
+name: Build OpenWrt IPK Packages
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+env:
+  OPENWRT_VERSION: '24.10.0'
+  PACKAGE_NAME: nvtop
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            sdk_url_path: x86/64
+          - arch: aarch64_generic
+            sdk_url_path: armsr/armv8
+          - arch: aarch64_cortex-a53
+            sdk_url_path: bcm27xx/bcm2710
+          - arch: aarch64_cortex-a72
+            sdk_url_path: bcm27xx/bcm2711
+          - arch: arm_cortex-a9
+            sdk_url_path: bcm53xx/generic
+          - arch: mipsel_24kc
+            sdk_url_path: ramips/mt7621
+          - arch: mips_24kc
+            sdk_url_path: ath79/generic
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          DEBIAN_FRONTEND=noninteractive echo "set man-db/auto-update false" | sudo debconf-communicate
+          DEBIAN_FRONTEND=noninteractive sudo dpkg-reconfigure man-db
+          DEBIAN_FRONTEND=noninteractive sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y ccache gettext libncurses5-dev xsltproc zstd xz-utils
+
+      - name: Download and Extract SDK
+        run: |
+          SDK_URL_BASE="https://downloads.openwrt.org/releases/${{ env.OPENWRT_VERSION }}/targets/${{ matrix.sdk_url_path }}"
+          SDK_PATH="${{ matrix.sdk_url_path }}"
+          SDK_NAME="${SDK_PATH//\//-}"
+          
+          wget -q -O sha256sums "$SDK_URL_BASE/sha256sums"
+          SDK_FILE=$(grep "openwrt-sdk-${{ env.OPENWRT_VERSION }}-${SDK_NAME}" sha256sums | cut -d' ' -f2 | sed 's/*//g' | head -n1)
+          
+          if [ -z "$SDK_FILE" ]; then
+            echo "::error::SDK file not found in sha256sums"
+            exit 1
+          fi
+          
+          echo "Found SDK file: $SDK_FILE"
+          wget -q -O "$SDK_FILE" "$SDK_URL_BASE/$SDK_FILE"
+          
+          if ! grep "$SDK_FILE" sha256sums | sha256sum -c -; then
+            echo "::error::SDK verification failed"
+            exit 1
+          fi
+          
+          mkdir -p openwrt-sdk
+          
+          # Auto-detect compression format and extract
+          if [[ "$SDK_FILE" == *.tar.zst ]]; then
+            echo "Extracting zstd archive..."
+            zstd -d "$SDK_FILE" --stdout | tar -xf - --strip=1 -C openwrt-sdk
+          elif [[ "$SDK_FILE" == *.tar.xz ]]; then
+            echo "Extracting xz archive..."
+            tar -xJf "$SDK_FILE" --strip=1 -C openwrt-sdk
+          else
+            echo "::error::Unknown archive format: $SDK_FILE"
+            exit 1
+          fi
+
+      - name: Link Package
+        run: |
+          PACKAGE_DIR="openwrt-sdk/package/${{ env.PACKAGE_NAME }}"
+          mkdir -p "$PACKAGE_DIR"
+          cp "${{ github.workspace }}/Makefile" "$PACKAGE_DIR/Makefile"
+          
+      - name: Update Feeds
+        working-directory: openwrt-sdk
+        run: |
+          # Replace git.openwrt.org with GitHub mirrors for better reliability
+          if [ -f feeds.conf.default ]; then
+            cp feeds.conf.default feeds.conf
+            sed -i 's#git.openwrt.org/openwrt/openwrt#github.com/openwrt/openwrt#g' feeds.conf
+            sed -i 's#git.openwrt.org/feed/packages#github.com/openwrt/packages#g' feeds.conf
+            sed -i 's#git.openwrt.org/project/luci#github.com/openwrt/luci#g' feeds.conf
+            sed -i 's#git.openwrt.org/feed/routing#github.com/openwrt/routing#g' feeds.conf
+            sed -i 's#git.openwrt.org/feed/telephony#github.com/openwrt/telephony#g' feeds.conf
+          fi
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Configure Build
+        working-directory: openwrt-sdk
+        run: |
+          make defconfig
+          make package/${{ env.PACKAGE_NAME }}/compile V=s
+
+      - name: Find IPK Files
+        id: find_ipk
+        working-directory: openwrt-sdk
+        run: |
+          IPK_PATH=$(find bin/packages -name "${{ env.PACKAGE_NAME }}*.ipk" | head -n 1)
+          echo "ipk_path=$IPK_PATH" >> $GITHUB_OUTPUT
+          echo "Found IPK: $IPK_PATH"
+
+      - name: Upload IPK Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}_${{ matrix.arch }}
+          path: openwrt-sdk/${{ steps.find_ipk.outputs.ipk_path }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*.ipk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
